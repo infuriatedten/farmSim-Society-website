@@ -1,0 +1,10 @@
+document.getElementById('banking-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const response = await fetch('/banking', {
+        method: 'POST',
+        body: formData
+    });
+    const data = await response.json();
+    document.getElementById('result').innerText = `User: ${data.username}, Balance: ${data.balance}`;
+});

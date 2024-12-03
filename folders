@@ -1,0 +1,13 @@
+farm_sim_website/
+│
+├── app.py               # Main Flask application
+├── templates/
+│   ├── index.html
+│   ├── banking.html
+│   ├── profile.html
+│   ├── admin_login.html  # Admin login page
+│   ├── admin_dashboard.html  # Admin panel
+├── static/
+│   ├── styles.css
+│   └── scripts.js
+└── database.db          # SQLite database

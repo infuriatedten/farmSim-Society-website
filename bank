@@ -1,0 +1,76 @@
+from flask import Flask, render_template, request, redirect, url_for, jsonify
+import sqlite3
+
+app = Flask(__name__)
+
+# Initialize the database
+def init_db():
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            balance REAL DEFAULT 0
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            type TEXT,
+            amount REAL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/banking', methods=['GET', 'POST'])
+def banking():
+    if request.method == 'POST':
+        username = request.form['username']
+        action = request.form['action']
+        amount = float(request.form['amount'])
+
+        conn = sqlite3.connect('database.db')
+        cursor = conn.cursor()
+
+        # Find or create user
+        cursor.execute("SELECT id, balance FROM users WHERE username = ?", (username,))
+        user = cursor.fetchone()
+        if not user:
+            cursor.execute("INSERT INTO users (username, balance) VALUES (?, ?)", (username, 0))
+            conn.commit()
+            cursor.execute("SELECT id, balance FROM users WHERE username = ?", (username,))
+            user = cursor.fetchone()
+
+        user_id, balance = user
+
+        # Perform action
+        if action == "deposit":
+            balance += amount
+            cursor.execute("INSERT INTO transactions (user_id, type, amount) VALUES (?, ?, ?)",
+                           (user_id, 'deposit', amount))
+        elif action == "withdraw" and balance >= amount:
+            balance -= amount
+            cursor.execute("INSERT INTO transactions (user_id, type, amount) VALUES (?, ?, ?)",
+                           (user_id, 'withdraw', amount))
+
+        # Update balance
+        cursor.execute("UPDATE users SET balance = ? WHERE id = ?", (balance, user_id))
+        conn.commit()
+        conn.close()
+
+        return jsonify({"username": username, "balance": balance})
+
+    return render_template('banking.html')
+
+if __name__ == '__main__':
+    init_db()
+    app.run(debug=True)
